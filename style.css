@@ -12,11 +12,7 @@ body {
     min-height: 100vh;
 }
 
-<<<<<<< HEAD
 .app {
-=======
-header {
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
     display: flex;
     flex-direction: column;
     min-height: 100vh;
@@ -60,7 +56,6 @@ header {
     color: transparent;
 }
 
-<<<<<<< HEAD
 /* ========== НАВИГАЦИЯ ========== */
 .nav {
     display: flex;
@@ -92,8 +87,6 @@ header {
 }
 
 /* ========== ПАНЕЛЬ ПОЛЬЗОВАТЕЛЯ ========== */
-=======
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 .user-panel {
     display: flex;
     gap: 10px;
@@ -129,7 +122,6 @@ header {
     font-weight: 600;
 }
 
-<<<<<<< HEAD
 .profile-btn {
     background: linear-gradient(135deg, #f5c518 0%, #ff8c00 100%);
     border: none;
@@ -140,75 +132,6 @@ header {
     color: #0a0a0a;
     transition: transform 0.2s;
     font-family: 'Inter', sans-serif;
-=======
-.search-box input {
-    padding: 12px 20px;
-    width: 300px;
-    border-radius: 30px;
-    border: none;
-    background: #2d2d44;
-    color: white;
-    font-size: 16px;
-    transition: all 0.3s ease;
-}
-
-.search-box input:focus {
-    outline: none;
-    background: #3d3d5c;
-    box-shadow: 0 0 0 2px #f5c518;
-}
-
-.search-box input::placeholder {
-    color: #888;
-}
-
-.genre-filters {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin: 25px 5% 15px;
-    flex-wrap: wrap;
-}
-
-.filter-btn {
-    background: #1e1e2e;
-    border: none;
-    padding: 10px 24px;
-    color: #e0e0e0;
-    border-radius: 40px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.filter-btn:hover {
-    background: #2d2d44;
-    transform: translateY(-2px);
-}
-
-.filter-btn.active {
-    background: linear-gradient(135deg, #f5c518 0%, #ff8c00 100%);
-    color: #0a0a0a;
-    font-weight: bold;
-    box-shadow: 0 4px 15px rgba(245,197,24,0.3);
-}
-
-.catalog {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 30px;
-    padding: 30px 5%;
-    flex: 1;
-}
-
-.card {
-    background: #1a1a2e;
-    border-radius: 16px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.3s ease;
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 }
 
 .profile-btn:hover {
@@ -382,6 +305,9 @@ header {
     font-size: 16px;
     font-weight: 700;
     margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .movie-meta {
@@ -392,41 +318,15 @@ header {
     margin-bottom: 8px;
 }
 
-<<<<<<< HEAD
 .movie-rating {
-=======
-.rating {
-    display: inline-block;
-    background: linear-gradient(135deg, #f5c518 0%, #ff8c00 100%);
-    color: #0a0a0a;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 14px;
-}
-
-.favorite-btn {
-    background: transparent;
-    border: 1px solid #f5c518;
-    border-radius: 20px;
-    padding: 6px 12px;
-    margin-top: 10px;
-    cursor: pointer;
-    color: #f5c518;
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
     font-size: 13px;
     color: #f5c518;
     margin-bottom: 12px;
 }
 
-<<<<<<< HEAD
 .movie-actions {
     display: flex;
     gap: 10px;
-=======
-.favorite-btn:hover {
-    background: rgba(245, 197, 24, 0.2);
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 }
 
 .fav-btn {
@@ -440,7 +340,6 @@ header {
     transition: all 0.2s;
 }
 
-<<<<<<< HEAD
 .fav-btn.active {
     background: #ff4d4d;
 }
@@ -463,8 +362,6 @@ header {
 }
 
 /* ========== МОДАЛЬНЫЕ ОКНА ========== */
-=======
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 .modal {
     display: none;
     position: fixed;
@@ -488,7 +385,6 @@ header {
     animation: modalFadeIn 0.3s ease;
 }
 
-<<<<<<< HEAD
 .modal-close {
     position: absolute;
     right: 20px;
@@ -527,11 +423,6 @@ header {
 /* ========== АВТОРИЗАЦИЯ ========== */
 .auth-modal-content {
     padding: 40px 35px;
-=======
-.auth-modal .modal-content {
-    max-width: 400px;
-    padding: 30px;
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 }
 
 .auth-header {
@@ -583,26 +474,19 @@ header {
     border-color: #f5c518;
 }
 
-<<<<<<< HEAD
 .auth-submit-btn {
     width: 100%;
-=======
-.auth-modal button[type="submit"] {
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
     background: linear-gradient(135deg, #f5c518 0%, #ff8c00 100%);
     border: none;
     padding: 14px;
     border-radius: 40px;
     font-weight: 700;
     color: #0a0a0a;
-<<<<<<< HEAD
     cursor: pointer;
     transition: transform 0.2s;
     font-family: 'Inter', sans-serif;
     font-size: 16px;
     margin-top: 10px;
-=======
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 }
 
 .auth-submit-btn:hover {
@@ -619,13 +503,13 @@ header {
 .auth-switch a {
     color: #f5c518;
     cursor: pointer;
+    text-decoration: none;
 }
 
 .auth-switch a:hover {
     text-decoration: underline;
 }
 
-<<<<<<< HEAD
 /* ========== ПРОФИЛЬ ========== */
 .profile-modal-content {
     max-width: 400px;
@@ -649,24 +533,6 @@ header {
     align-items: center;
     justify-content: center;
     margin: 0 auto 20px;
-=======
-.close {
-    position: absolute;
-    right: 20px;
-    top: 15px;
-    font-size: 32px;
-    cursor: pointer;
-    color: white;
-    z-index: 10;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: rgba(0,0,0,0.5);
-    transition: all 0.2s;
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 }
 
 .profile-header h2 {
@@ -674,15 +540,9 @@ header {
     margin-bottom: 5px;
 }
 
-<<<<<<< HEAD
 .profile-email {
     color: #888;
     font-size: 14px;
-=======
-.profile-info {
-    margin: 20px 0;
-    line-height: 2;
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 }
 
 .profile-stats {
@@ -722,14 +582,8 @@ header {
     cursor: pointer;
     font-weight: 700;
     color: white;
-<<<<<<< HEAD
     transition: transform 0.2s;
     font-family: 'Inter', sans-serif;
-=======
-    font-weight: bold;
-    font-size: 16px;
-    transition: all 0.2s;
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 }
 
 .logout-btn:hover {
@@ -737,7 +591,6 @@ header {
     background: #ff3333;
 }
 
-<<<<<<< HEAD
 /* ========== ВИДЕОПЛЕЕР ========== */
 .player-modal-content {
     max-width: 900px;
@@ -746,8 +599,6 @@ header {
     overflow: hidden;
 }
 
-=======
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 .player-container {
     padding: 25px;
 }
@@ -768,15 +619,8 @@ header {
 
 .video-wrapper iframe {
     width: 100%;
-<<<<<<< HEAD
     height: 400px;
     border: none;
-=======
-    max-height: 70vh;
-    border-radius: 12px;
-    background: #000;
-    outline: none;
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 }
 
 .video-info {
@@ -794,12 +638,8 @@ header {
     line-height: 1.6;
 }
 
-<<<<<<< HEAD
 /* ========== ПОДВАЛ ========== */
 .footer {
-=======
-footer {
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
     text-align: center;
     padding: 30px;
     background: #0a0c10;
@@ -812,10 +652,7 @@ footer {
     font-size: 14px;
 }
 
-<<<<<<< HEAD
 /* ========== ЗАГРУЗКА И РЕЗУЛЬТАТЫ ========== */
-=======
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 .loading, .no-results {
     text-align: center;
     padding: 50px;
@@ -824,7 +661,6 @@ footer {
     grid-column: 1 / -1;
 }
 
-<<<<<<< HEAD
 /* ========== TOAST УВЕДОМЛЕНИЯ ========== */
 .toast {
     position: fixed;
@@ -851,23 +687,6 @@ footer {
 /* ========== АДАПТИВНОСТЬ ========== */
 @media (max-width: 1000px) {
     .header-container {
-=======
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: translateY(-50%) scale(0.95); }
-    to { opacity: 1; transform: translateY(-50%) scale(1); }
-}
-
-@keyframes fadeInOut {
-    0% { opacity: 0; transform: translateY(20px); }
-    15% { opacity: 1; transform: translateY(0); }
-    85% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(-20px); }
-}
-
-/* Адаптивность */
-@media (max-width: 768px) {
-    header {
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
         flex-direction: column;
     }
     
@@ -875,7 +694,6 @@ footer {
         order: 1;
     }
     
-<<<<<<< HEAD
     .user-panel {
         order: 2;
     }
@@ -890,61 +708,6 @@ footer {
 @media (max-width: 768px) {
     .hero-title {
         font-size: 32px;
-=======
-    .catalog {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-        padding: 20px;
-    }
-    
-    .card img {
-        height: 220px;
-    }
-    
-    .card h3 {
-        font-size: 14px;
-    }
-    
-    .card p {
-        font-size: 12px;
-    }
-    
-    .rating {
-        font-size: 12px;
-    }
-    
-    .favorite-btn {
-        font-size: 11px;
-        padding: 5px 10px;
-    }
-    
-    .filter-btn {
-        padding: 7px 16px;
-        font-size: 12px;
-    }
-    
-    .player-container {
-        padding: 15px;
-    }
-    
-    .player-container h2 {
-        font-size: 18px;
-    }
-    
-    video {
-        max-height: 50vh;
-    }
-    
-    .auth-modal .modal-content {
-        width: 95%;
-        padding: 20px;
-    }
-}
-
-@media (max-width: 480px) {
-    .catalog {
-        grid-template-columns: 1fr;
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
     }
     
     .hero {
@@ -960,7 +723,6 @@ footer {
         font-size: 22px;
     }
     
-<<<<<<< HEAD
     .video-wrapper iframe {
         height: 250px;
     }
@@ -981,25 +743,6 @@ footer {
 }
 
 /* ========== СКРОЛЛБАР ========== */
-=======
-    .logo-icon {
-        font-size: 26px;
-    }
-    
-    .auth-btn, .profile-btn {
-        padding: 6px 12px;
-        font-size: 12px;
-    }
-}
-
-@media (min-width: 1400px) {
-    .catalog {
-        grid-template-columns: repeat(5, 1fr);
-    }
-}
-
-/* Кастомный скроллбар */
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
 ::-webkit-scrollbar {
     width: 8px;
 }
@@ -1011,12 +754,4 @@ footer {
 ::-webkit-scrollbar-thumb {
     background: linear-gradient(135deg, #f5c518 0%, #ff8c00 100%);
     border-radius: 10px;
-<<<<<<< HEAD
 }
-=======
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #ff8c00;
-}
->>>>>>> f1dee75702e638c8e8fafa1b635aff0bf8148726
