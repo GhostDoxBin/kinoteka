@@ -14,7 +14,6 @@ body {
     flex-direction: column;
 }
 
-/* ========== ШАПКА САЙТА ========== */
 header {
     display: flex;
     justify-content: space-between;
@@ -48,7 +47,6 @@ header {
     color: transparent;
 }
 
-/* ========== ПАНЕЛЬ ПОЛЬЗОВАТЕЛЯ ========== */
 .user-panel {
     display: flex;
     gap: 10px;
@@ -81,7 +79,6 @@ header {
     font-weight: bold;
 }
 
-/* ========== ПОИСК ========== */
 .search-box input {
     padding: 12px 20px;
     width: 300px;
@@ -103,7 +100,6 @@ header {
     color: #888;
 }
 
-/* ========== ФИЛЬТРЫ ЖАНРОВ ========== */
 .genre-filters {
     display: flex;
     justify-content: center;
@@ -136,7 +132,6 @@ header {
     box-shadow: 0 4px 15px rgba(245,197,24,0.3);
 }
 
-/* ========== КАТАЛОГ КАРТОЧЕК ========== */
 .catalog {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -151,7 +146,6 @@ header {
     overflow: hidden;
     cursor: pointer;
     transition: all 0.3s ease;
-    position: relative;
 }
 
 .card:hover {
@@ -178,9 +172,6 @@ header {
     font-size: 18px;
     font-weight: 600;
     margin-bottom: 8px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .card p {
@@ -199,7 +190,6 @@ header {
     font-size: 14px;
 }
 
-/* ========== КНОПКА ИЗБРАННОГО НА КАРТОЧКЕ ========== */
 .favorite-btn {
     background: transparent;
     border: 1px solid #f5c518;
@@ -215,7 +205,6 @@ header {
 
 .favorite-btn:hover {
     background: rgba(245, 197, 24, 0.2);
-    transform: scale(1.02);
 }
 
 .favorite-btn.active {
@@ -224,7 +213,6 @@ header {
     border: none;
 }
 
-/* ========== МОДАЛЬНЫЕ ОКНА (ОБЩИЕ СТИЛИ) ========== */
 .modal {
     display: none;
     position: fixed;
@@ -250,18 +238,6 @@ header {
     animation: modalFadeIn 0.3s ease;
 }
 
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-50%) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(-50%) scale(1);
-    }
-}
-
-/* ========== МОДАЛЬНЫЕ ОКНА АВТОРИЗАЦИИ ========== */
 .auth-modal .modal-content {
     max-width: 400px;
     padding: 30px;
@@ -293,10 +269,6 @@ header {
     box-shadow: 0 0 0 2px #f5c518;
 }
 
-.auth-modal input::placeholder {
-    color: #888;
-}
-
 .auth-modal button[type="submit"] {
     background: linear-gradient(135deg, #f5c518 0%, #ff8c00 100%);
     border: none;
@@ -306,7 +278,6 @@ header {
     font-weight: bold;
     font-size: 16px;
     color: #0a0a0a;
-    transition: transform 0.2s ease;
 }
 
 .auth-modal button[type="submit"]:hover {
@@ -322,7 +293,6 @@ header {
 .auth-modal a {
     color: #f5c518;
     cursor: pointer;
-    text-decoration: none;
 }
 
 .auth-modal a:hover {
@@ -337,7 +307,6 @@ header {
     cursor: pointer;
     color: white;
     z-index: 10;
-    transition: all 0.2s;
     width: 40px;
     height: 40px;
     display: flex;
@@ -345,6 +314,7 @@ header {
     justify-content: center;
     border-radius: 50%;
     background: rgba(0,0,0,0.5);
+    transition: all 0.2s;
 }
 
 .close:hover {
@@ -352,7 +322,6 @@ header {
     color: #0a0a0a;
 }
 
-/* ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ========== */
 .profile-info {
     margin: 20px 0;
     line-height: 2;
@@ -377,7 +346,7 @@ header {
     color: white;
     font-weight: bold;
     font-size: 16px;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
 }
 
 .logout-btn:hover {
@@ -385,7 +354,6 @@ header {
     transform: scale(1.02);
 }
 
-/* ========== ВИДЕОПЛЕЕР ========== */
 .player-container {
     padding: 25px;
 }
@@ -416,10 +384,6 @@ video {
     outline: none;
 }
 
-video:focus {
-    outline: none;
-}
-
 .video-info {
     margin-top: 20px;
 }
@@ -435,7 +399,6 @@ video:focus {
     line-height: 1.6;
 }
 
-/* ========== ПОДВАЛ ========== */
 footer {
     text-align: center;
     padding: 25px;
@@ -445,15 +408,7 @@ footer {
     font-size: 14px;
 }
 
-/* ========== ЗАГРУЗКА И ПУСТЫЕ РЕЗУЛЬТАТЫ ========== */
-.loading {
-    text-align: center;
-    padding: 50px;
-    font-size: 18px;
-    color: #888;
-}
-
-.no-results {
+.loading, .no-results {
     text-align: center;
     padding: 50px;
     font-size: 18px;
@@ -461,7 +416,11 @@ footer {
     grid-column: 1 / -1;
 }
 
-/* ========== TOAST УВЕДОМЛЕНИЯ ========== */
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-50%) scale(0.95); }
+    to { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+
 @keyframes fadeInOut {
     0% { opacity: 0; transform: translateY(20px); }
     15% { opacity: 1; transform: translateY(0); }
@@ -469,7 +428,7 @@ footer {
     100% { opacity: 0; transform: translateY(-20px); }
 }
 
-/* ========== АДАПТИВНОСТЬ (ПЛАНШЕТЫ) ========== */
+/* Адаптивность */
 @media (max-width: 768px) {
     header {
         flex-direction: column;
@@ -480,10 +439,6 @@ footer {
     .search-box input {
         width: 100%;
         max-width: 300px;
-    }
-    
-    .user-panel {
-        order: -1;
     }
     
     .catalog {
@@ -524,7 +479,6 @@ footer {
     
     .player-container h2 {
         font-size: 18px;
-        margin-top: 10px;
     }
     
     video {
@@ -537,7 +491,6 @@ footer {
     }
 }
 
-/* ========== АДАПТИВНОСТЬ (ТЕЛЕФОНЫ) ========== */
 @media (max-width: 480px) {
     .catalog {
         grid-template-columns: 1fr;
@@ -568,25 +521,15 @@ footer {
         padding: 6px 12px;
         font-size: 12px;
     }
-    
-    .user-name {
-        font-size: 12px;
-    }
 }
 
-/* ========== ДЕСКТОП (БОЛЬШИЕ ЭКРАНЫ) ========== */
 @media (min-width: 1400px) {
     .catalog {
         grid-template-columns: repeat(5, 1fr);
     }
-    
-    .container {
-        max-width: 1400px;
-        margin: 0 auto;
-    }
 }
 
-/* ========== КАСТОМНЫЙ СКРОЛЛБАР ========== */
+/* Кастомный скроллбар */
 ::-webkit-scrollbar {
     width: 8px;
 }
