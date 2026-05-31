@@ -35,7 +35,7 @@
         "genre": "мультфильм, комедия, фантастика",
         "year": 2013,
         "rating": 9.2,
-        "poster": "posters/test.jpg",
+        "poster": "",
         "description": "Гениальный учёный-алкоголик Рик Санчез путешествует по вселенным со своим внуком Морти. Безумные приключения, философские размышления и чёрный юмор.",
         "vkVideoCode": "<iframe src=\"https://vkvideo.ru/video_ext.php?oid=-237581709&id=456239135&hash=a11afbc6d7cec5bd&hd=4\" width=\"100%\" height=\"400\" allow=\"autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock;\" frameborder=\"0\" allowfullscreen style=\"border-radius:12px;\"></iframe>"
     },
