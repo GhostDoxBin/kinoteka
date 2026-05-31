@@ -1,257 +1,206 @@
-// script.js - загрузка данных из JSON и работа с локальным видео
+// ==================== ДАННЫЕ ====================
 let allSeries = [];
 let currentUser = null;
 
-// ========== ЗАГРУЗКА ДАННЫХ ==========
+// ==================== ЗАГРУЗКА ДАННЫХ ====================
 async function loadData() {
     try {
         const response = await fetch('data.json');
-        if (!response.ok) {
-            throw new Error(`Ошибка загрузки: ${response.status}`);
-        }
+        if (!response.ok) throw new Error('Ошибка загрузки');
         allSeries = await response.json();
-        
-        // Загружаем текущего пользователя
-        loadCurrentUserFromStorage();
+        loadCurrentUser();
         updateUserPanel();
-        
         renderCards(allSeries);
         setupFiltersAndSearch();
         console.log("✅ Загружено", allSeries.length, "карточек");
     } catch (error) {
-        console.error("❌ Ошибка загрузки данных:", error);
-        const container = document.getElementById('catalogContainer');
-        container.innerHTML = '<div class="no-results">❌ Ошибка загрузки данных. Убедитесь, что файл data.json существует.</div>';
+        document.getElementById('moviesGrid').innerHTML = '<div class="no-results">❌ Ошибка загрузки данных</div>';
     }
 }
 
-// ========== РЕНДЕРИНГ КАРТОЧЕК ==========
+// ==================== РЕНДЕРИНГ КАРТОЧЕК ====================
 function renderCards(seriesArray) {
-    const container = document.getElementById('catalogContainer');
-    
-    if(seriesArray.length === 0) {
-        container.innerHTML = '<div class="no-results">😕 Ничего не найдено. Попробуйте изменить фильтр или поиск.</div>';
+    const container = document.getElementById('moviesGrid');
+    if (!seriesArray.length) {
+        container.innerHTML = '<div class="no-results">😕 Ничего не найдено</div>';
         return;
     }
     
     container.innerHTML = '';
-    
-    // Получаем избранное текущего пользователя
     const favorites = currentUser ? (currentUser.favorites || []) : [];
     
     seriesArray.forEach(series => {
-        const card = document.createElement('div');
-        card.classList.add('card');
         const isFavorite = favorites.includes(series.id);
-        
+        const card = document.createElement('div');
+        card.className = 'movie-card';
         card.innerHTML = `
-            <img src="${series.poster}" alt="${series.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-            <div class="card-content">
-                <h3>${escapeHtml(series.title)}</h3>
-                <p>${series.year} | ${series.genre}</p>
-                <span class="rating">⭐ ${series.rating}</span>
-                <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-id="${series.id}">
-                    ${isFavorite ? '❤️ В избранном' : '♡ В избранное'}
-                </button>
+            <img src="${series.poster}" alt="${series.title}" class="movie-poster" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+            <div class="movie-info">
+                <h3 class="movie-title">${escapeHtml(series.title)}</h3>
+                <div class="movie-meta">
+                    <span>${series.year}</span>
+                    <span>${series.genre}</span>
+                </div>
+                <div class="movie-rating">⭐ ${series.rating}</div>
+                <div class="movie-actions">
+                    <button class="fav-btn ${isFavorite ? 'active' : ''}" data-id="${series.id}">
+                        ${isFavorite ? '❤️' : '♡'}
+                    </button>
+                    <button class="watch-btn" data-id="${series.id}">Смотреть</button>
+                </div>
             </div>
         `;
         
-        // Открытие плеера при клике на карточку (не на кнопку)
-        card.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('favorite-btn')) {
-                openPlayer(series);
-            }
+        card.querySelector('.fav-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleFavorite(series.id);
+            renderCards(getFilteredMovies());
         });
         
-        // Обработчик кнопки избранного
-        const favBtn = card.querySelector('.favorite-btn');
-        favBtn.addEventListener('click', (e) => {
+        card.querySelector('.watch-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-            toggleFavorite(series.id, favBtn);
+            openPlayer(series);
         });
         
         container.appendChild(card);
     });
 }
 
-// ========== ФИЛЬТРАЦИЯ И ПОИСК ==========
-function filterAndSearch() {
-    const activeGenreBtn = document.querySelector('.filter-btn.active');
-    let genre = activeGenreBtn ? activeGenreBtn.dataset.genre : 'all';
-    
+function getFilteredMovies() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-
-    let filtered = allSeries.filter(series => {
-        let matchGenre = (genre === 'all') || series.genre.toLowerCase().includes(genre.toLowerCase());
-        let matchSearch = series.title.toLowerCase().includes(searchTerm);
-        return matchGenre && matchSearch;
-    });
+    const genre = document.getElementById('genreFilter').value;
+    const activeNav = document.querySelector('.nav-btn.active')?.dataset.nav || 'home';
     
-    renderCards(filtered);
+    let filtered = [...allSeries];
+    
+    if (searchTerm) {
+        filtered = filtered.filter(m => m.title.toLowerCase().includes(searchTerm));
+    }
+    if (genre !== 'all') {
+        filtered = filtered.filter(m => m.genre.toLowerCase().includes(genre.toLowerCase()));
+    }
+    if (activeNav === 'favorites' && currentUser) {
+        filtered = filtered.filter(m => currentUser.favorites?.includes(m.id));
+    }
+    if (activeNav === 'series') {
+        filtered = filtered.filter(m => m.genre.toLowerCase().includes('сериал'));
+    }
+    if (activeNav === 'movies') {
+        filtered = filtered.filter(m => !m.genre.toLowerCase().includes('сериал'));
+    }
+    
+    return filtered;
+}
+
+function updateUI() {
+    renderCards(getFilteredMovies());
 }
 
 function setupFiltersAndSearch() {
-    document.querySelectorAll('.filter-btn').forEach(btn => {
+    document.getElementById('searchInput').addEventListener('input', () => updateUI());
+    document.getElementById('genreFilter').addEventListener('change', () => updateUI());
+    
+    document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            filterAndSearch();
+            const titles = { home: 'Сейчас в прокате', movies: 'Фильмы', series: 'Сериалы', favorites: 'Избранное' };
+            document.getElementById('sectionTitle').textContent = titles[btn.dataset.nav] || 'Сейчас в прокате';
+            updateUI();
         });
     });
-    
-    const searchInput = document.getElementById('searchInput');
-    if(searchInput) {
-        searchInput.addEventListener('input', filterAndSearch);
-    }
 }
 
-// ========== ВИДЕОПЛЕЕР ==========
+// ==================== ВИДЕОПЛЕЕР ====================
 function openPlayer(series) {
     const modal = document.getElementById('playerModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalDescription = document.getElementById('modalDescription');
-    const modalYearRating = document.getElementById('modalYearRating');
-    const videoPlayer = document.getElementById('videoPlayer');
-    const videoSource = document.getElementById('videoSource');
+    const videoContainer = document.getElementById('videoContainer');
+    const trailerId = series.trailerId || '8Qn_spdM5Zg';
     
-    // Останавливаем предыдущее видео, если оно было
-    if (videoPlayer) {
-        videoPlayer.pause();
-    }
+    videoContainer.innerHTML = `
+        <iframe 
+            src="https://www.youtube.com/embed/${trailerId}?autoplay=1" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen>
+        </iframe>
+    `;
     
-    // Устанавливаем новый источник видео
-    videoSource.src = series.videoSrc;
-    videoPlayer.load();
+    document.getElementById('modalTitle').textContent = series.title;
+    document.getElementById('modalDescription').textContent = series.description;
+    document.getElementById('modalYearRating').textContent = `${series.year} | ${series.genre} | ⭐ ${series.rating}`;
     
-    // Запускаем видео с небольшой задержкой
-    setTimeout(() => {
-        videoPlayer.play().catch(e => console.log("Автовоспроизведение заблокировано:", e));
-    }, 100);
-    
-    // Обновляем информацию
-    modalTitle.textContent = series.title;
-    modalDescription.textContent = series.description;
-    modalYearRating.textContent = `${series.year} | ${series.genre} | ⭐ ${series.rating}`;
-    
-    // Показываем модальное окно
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
 
-function closeModal() {
-    const modal = document.getElementById('playerModal');
-    const videoPlayer = document.getElementById('videoPlayer');
-    
-    modal.style.display = 'none';
-    
-    // Останавливаем видео при закрытии
-    if (videoPlayer) {
-        videoPlayer.pause();
-        videoPlayer.currentTime = 0;
-    }
-}
-
-// ========== СИСТЕМА ПОЛЬЗОВАТЕЛЕЙ (AUTH) ==========
-
-// Загрузка пользователей из localStorage
+// ==================== АВТОРИЗАЦИЯ ====================
 function getUsers() {
-    const users = localStorage.getItem('users');
-    return users ? JSON.parse(users) : [];
+    return JSON.parse(localStorage.getItem('users') || '[]');
 }
 
-// Сохранение пользователей в localStorage
 function saveUsers(users) {
     localStorage.setItem('users', JSON.stringify(users));
 }
 
-// Загрузка текущего пользователя
-function loadCurrentUserFromStorage() {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-    }
-    return currentUser;
+function loadCurrentUser() {
+    const saved = localStorage.getItem('currentUser');
+    if (saved) currentUser = JSON.parse(saved);
 }
 
-// Регистрация нового пользователя
 function registerUser(username, email, password) {
     const users = getUsers();
-    
-    // Проверка на существующего пользователя
     if (users.find(u => u.email === email)) {
-        showToast('Пользователь с таким email уже существует', 'error');
+        showToast('Email уже существует', 'error');
         return false;
     }
-    
     if (users.find(u => u.username === username)) {
-        showToast('Пользователь с таким именем уже существует', 'error');
+        showToast('Имя пользователя уже существует', 'error');
         return false;
     }
     
-    // Создание нового пользователя
     const newUser = {
         id: Date.now(),
-        username: username,
-        email: email,
-        password: password,
+        username,
+        email,
+        password,
         favorites: [],
         registeredAt: new Date().toISOString()
     };
-    
     users.push(newUser);
     saveUsers(users);
-    
-    showToast('Регистрация успешна! Теперь войдите в аккаунт', 'success');
+    showToast('Регистрация успешна!', 'success');
     return true;
 }
 
-// Вход пользователя
 function loginUser(email, password) {
     const users = getUsers();
     const user = users.find(u => u.email === email && u.password === password);
-    
     if (user) {
         currentUser = { ...user };
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         updateUserPanel();
-        renderCards(filterAndSearchGetCurrentList());
-        showToast(`Добро пожаловать, ${user.username}!`, 'success');
+        updateUI();
         closeAllModals();
+        showToast(`Добро пожаловать, ${user.username}!`, 'success');
         return true;
     }
-    
     showToast('Неверный email или пароль', 'error');
     return false;
 }
 
-// Выход из аккаунта
 function logoutUser() {
     currentUser = null;
     localStorage.removeItem('currentUser');
     updateUserPanel();
-    renderCards(filterAndSearchGetCurrentList());
-    showToast('Вы вышли из аккаунта', 'info');
+    updateUI();
     closeAllModals();
+    showToast('Вы вышли из аккаунта', 'info');
 }
 
-// Обновление избранного пользователя
-function updateUserFavorites(favorites) {
-    if (!currentUser) return;
-    
-    const users = getUsers();
-    const userIndex = users.findIndex(u => u.id === currentUser.id);
-    
-    if (userIndex !== -1) {
-        users[userIndex].favorites = favorites;
-        saveUsers(users);
-        currentUser.favorites = [...favorites];
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    }
-}
-
-// Переключение избранного
-function toggleFavorite(movieId, btnElement) {
+function toggleFavorite(movieId) {
     if (!currentUser) {
-        showToast('Войдите в аккаунт, чтобы добавлять в избранное', 'warning');
+        showToast('Войдите в аккаунт', 'warning');
         openLoginModal();
         return;
     }
@@ -261,63 +210,50 @@ function toggleFavorite(movieId, btnElement) {
     
     if (index === -1) {
         favorites.push(movieId);
-        btnElement.innerHTML = '❤️ В избранном';
-        btnElement.classList.add('active');
         showToast('Добавлено в избранное', 'success');
     } else {
         favorites.splice(index, 1);
-        btnElement.innerHTML = '♡ В избранное';
-        btnElement.classList.remove('active');
         showToast('Удалено из избранного', 'info');
     }
     
     currentUser.favorites = favorites;
-    updateUserFavorites(favorites);
+    
+    const users = getUsers();
+    const userIndex = users.findIndex(u => u.id === currentUser.id);
+    if (userIndex !== -1) {
+        users[userIndex].favorites = favorites;
+        saveUsers(users);
+    }
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
 }
 
-// Получение отфильтрованного списка (для обновления)
-function filterAndSearchGetCurrentList() {
-    const activeGenreBtn = document.querySelector('.filter-btn.active');
-    let genre = activeGenreBtn ? activeGenreBtn.dataset.genre : 'all';
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-
-    return allSeries.filter(series => {
-        let matchGenre = (genre === 'all') || series.genre.toLowerCase().includes(genre.toLowerCase());
-        let matchSearch = series.title.toLowerCase().includes(searchTerm);
-        return matchGenre && matchSearch;
-    });
-}
-
-// ========== UI ОБНОВЛЕНИЯ ==========
+// ==================== UI ФУНКЦИИ ====================
 function updateUserPanel() {
     const panel = document.getElementById('userPanel');
-    if (!panel) return;
-    
     if (currentUser) {
         panel.innerHTML = `
             <div class="user-info">
                 <span class="user-name">👤 ${escapeHtml(currentUser.username)}</span>
-                <button id="profileBtn" class="profile-btn">Профиль</button>
+                <button class="profile-btn" id="profileBtn">Профиль</button>
             </div>
         `;
         document.getElementById('profileBtn')?.addEventListener('click', openProfileModal);
     } else {
         panel.innerHTML = `
-            <button id="loginBtn" class="auth-btn">Вход</button>
-            <button id="registerBtn" class="auth-btn">Регистрация</button>
+            <button class="auth-btn" id="showLoginBtn">Вход</button>
+            <button class="auth-btn" id="showRegisterBtn">Регистрация</button>
         `;
-        document.getElementById('loginBtn')?.addEventListener('click', openLoginModal);
-        document.getElementById('registerBtn')?.addEventListener('click', openRegisterModal);
+        document.getElementById('showLoginBtn')?.addEventListener('click', openLoginModal);
+        document.getElementById('showRegisterBtn')?.addEventListener('click', openRegisterModal);
     }
 }
 
-// ========== МОДАЛЬНЫЕ ОКНА ==========
 function openLoginModal() {
-    document.getElementById('loginModal').style.display = 'block';
+    document.getElementById('loginModal').style.display = 'flex';
 }
 
 function openRegisterModal() {
-    document.getElementById('registerModal').style.display = 'block';
+    document.getElementById('registerModal').style.display = 'flex';
 }
 
 function openProfileModal() {
@@ -325,9 +261,8 @@ function openProfileModal() {
         document.getElementById('profileUsername').textContent = currentUser.username;
         document.getElementById('profileEmail').textContent = currentUser.email;
         document.getElementById('profileDate').textContent = new Date(currentUser.registeredAt).toLocaleDateString();
-        const favoritesCount = (currentUser.favorites || []).length;
-        document.getElementById('profileFavoritesCount').textContent = favoritesCount;
-        document.getElementById('profileModal').style.display = 'block';
+        document.getElementById('profileFavoritesCount').textContent = (currentUser.favorites || []).length;
+        document.getElementById('profileModal').style.display = 'flex';
     }
 }
 
@@ -335,33 +270,21 @@ function closeAllModals() {
     document.querySelectorAll('.modal').forEach(modal => {
         modal.style.display = 'none';
     });
+    document.getElementById('videoContainer').innerHTML = '';
+    document.body.style.overflow = 'auto';
 }
 
-// ========== TOAST УВЕДОМЛЕНИЯ ==========
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
+    toast.className = `toast ${type}`;
     toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#333'};
-        color: white;
-        padding: 12px 24px;
-        border-radius: 8px;
-        z-index: 1001;
-        animation: fadeInOut 2s ease;
-        font-size: 14px;
-    `;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
+    setTimeout(() => toast.remove(), 2500);
 }
 
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
+    return str.replace(/[&<>]/g, m => {
         if (m === '&') return '&amp;';
         if (m === '<') return '&lt;';
         if (m === '>') return '&gt;';
@@ -369,103 +292,53 @@ function escapeHtml(str) {
     });
 }
 
-// ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
-
-// Закрытие модального окна плеера
-const closeBtn = document.querySelector('#playerModal .close');
-if (closeBtn) {
-    closeBtn.addEventListener('click', closeModal);
-}
-
-// Закрытие модальных окон авторизации
-document.querySelectorAll('.auth-close').forEach(btn => {
+// ==================== ОБРАБОТЧИКИ ====================
+document.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', closeAllModals);
 });
 
-// Закрытие по клику вне окна
-window.onclick = function(event) {
-    const modals = ['playerModal', 'loginModal', 'registerModal', 'profileModal'];
-    modals.forEach(modalId => {
-        const modal = document.getElementById(modalId);
-        if (event.target === modal) {
-            modal.style.display = 'none';
-            if (modalId === 'playerModal') {
-                const videoPlayer = document.getElementById('videoPlayer');
-                if (videoPlayer) {
-                    videoPlayer.pause();
-                    videoPlayer.currentTime = 0;
-                }
-            }
-        }
-    });
-}
+window.onclick = (e) => {
+    if (e.target.classList.contains('modal')) closeAllModals();
+};
 
-// Закрытие по Escape
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAllModals();
+});
+
+document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    loginUser(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
+});
+
+document.getElementById('registerForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value;
+    const email = document.getElementById('regEmail').value;
+    const password = document.getElementById('regPassword').value;
+    if (registerUser(username, email, password)) {
         closeAllModals();
-        const modal = document.getElementById('playerModal');
-        if (modal.style.display === 'block') {
-            closeModal();
-        }
+        openLoginModal();
     }
 });
 
-// Форма входа
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        loginUser(email, password);
-    });
-}
-
-// Форма регистрации
-const registerForm = document.getElementById('registerForm');
-if (registerForm) {
-    registerForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('regUsername').value;
-        const email = document.getElementById('regEmail').value;
-        const password = document.getElementById('regPassword').value;
-        if (registerUser(username, email, password)) {
-            document.getElementById('registerModal').style.display = 'none';
-            openLoginModal();
-        }
-    });
-}
-
-// Кнопка выхода
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-        logoutUser();
-        closeAllModals();
-    });
-}
-
-// Переключение между формами
-const showRegister = document.getElementById('showRegister');
-if (showRegister) {
-    showRegister.addEventListener('click', (e) => {
-        e.preventDefault();
-        closeAllModals();
-        openRegisterModal();
-    });
-}
-
-const showLogin = document.getElementById('showLogin');
-if (showLogin) {
-    showLogin.addEventListener('click', (e) => {
-        e.preventDefault();
-        closeAllModals();
-        openLoginModal();
-    });
-}
-
-// Запуск при загрузке страницы
-window.addEventListener('load', () => {
-    loadData();
+document.getElementById('switchToRegister')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeAllModals();
+    openRegisterModal();
 });
+
+document.getElementById('switchToLogin')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeAllModals();
+    openLoginModal();
+});
+
+document.getElementById('logoutBtn')?.addEventListener('click', logoutUser);
+
+document.getElementById('heroTrailerBtn')?.addEventListener('click', () => {
+    const duneMovie = allSeries.find(m => m.title.includes('Дюна'));
+    if (duneMovie) openPlayer(duneMovie);
+});
+
+// ==================== ЗАПУСК ====================
+loadData();
