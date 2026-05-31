@@ -1,6 +1,7 @@
 // ==================== ДАННЫЕ ====================
 let allSeries = [];
 let currentUser = null;
+let renderTimeout = null;
 
 // ==================== ЗАГРУЗКА ДАННЫХ ====================
 async function loadData() {
@@ -15,64 +16,82 @@ async function loadData() {
         console.log("✅ Загружено", allSeries.length, "карточек");
     } catch (error) {
         console.error(error);
-        document.getElementById('moviesGrid').innerHTML = '<div class="no-results">❌ Ошибка загрузки данных. Убедитесь, что файл data.json существует.</div>';
+        const grid = document.getElementById('moviesGrid');
+        if (grid) grid.innerHTML = '<div class="no-results">❌ Ошибка загрузки данных</div>';
     }
 }
 
-// ==================== РЕНДЕРИНГ КАРТОЧЕК ====================
+// ==================== РЕНДЕРИНГ КАРТОЧЕК (ОПТИМИЗИРОВАННЫЙ) ====================
 function renderCards(seriesArray) {
     const container = document.getElementById('moviesGrid');
+    if (!container) return;
     
     if (!seriesArray.length) {
-        container.innerHTML = '<div class="no-results">😕 Ничего не найдено. Попробуйте изменить фильтр или поиск.</div>';
+        container.innerHTML = '<div class="no-results">😕 Ничего не найдено</div>';
         return;
     }
     
-    container.innerHTML = '';
     const favorites = currentUser ? (currentUser.favorites || []) : [];
     
-    seriesArray.forEach(series => {
+    // Собираем HTML строкой (быстрее, чем создавать элементы по одному)
+    let html = '';
+    for (const series of seriesArray) {
         const isFavorite = favorites.includes(series.id);
-        const card = document.createElement('div');
-        card.className = 'movie-card';
-        card.innerHTML = `
-            <img src="${series.poster}" alt="${series.title}" class="movie-poster" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-            <div class="movie-info">
-                <h3 class="movie-title">${escapeHtml(series.title)}</h3>
-                <div class="movie-meta">
-                    <span>${series.year}</span>
-                    <span>${series.genre}</span>
-                </div>
-                <div class="movie-rating">⭐ ${series.rating}</div>
-                <div class="movie-actions">
-                    <button class="fav-btn ${isFavorite ? 'active' : ''}" data-id="${series.id}">
-                        ${isFavorite ? '❤️' : '♡'}
-                    </button>
-                    <button class="watch-btn" data-id="${series.id}">Смотреть</button>
+        html += `
+            <div class="movie-card" data-id="${series.id}">
+                <img src="${series.poster}" alt="${series.title}" class="movie-poster" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+                <div class="movie-info">
+                    <h3 class="movie-title">${escapeHtml(series.title)}</h3>
+                    <div class="movie-meta">
+                        <span>${series.year}</span>
+                        <span>${series.genre}</span>
+                    </div>
+                    <div class="movie-rating">⭐ ${series.rating}</div>
+                    <div class="movie-actions">
+                        <button class="fav-btn ${isFavorite ? 'active' : ''}" data-id="${series.id}">
+                            ${isFavorite ? '❤️' : '♡'}
+                        </button>
+                        <button class="watch-btn" data-id="${series.id}">Смотреть</button>
+                    </div>
                 </div>
             </div>
         `;
-        
-        const favBtn = card.querySelector('.fav-btn');
-        favBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleFavorite(series.id);
-            renderCards(getFilteredMovies());
-        });
-        
-        const watchBtn = card.querySelector('.watch-btn');
-        watchBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openPlayer(series);
-        });
-        
-        container.appendChild(card);
+    }
+    
+    // Один раз меняем DOM
+    container.innerHTML = html;
+    
+    // Добавляем обработчики событий (один раз после вставки)
+    document.querySelectorAll('.fav-btn').forEach(btn => {
+        btn.removeEventListener('click', favHandler);
+        btn.addEventListener('click', favHandler);
+    });
+    
+    document.querySelectorAll('.watch-btn').forEach(btn => {
+        btn.removeEventListener('click', watchHandler);
+        btn.addEventListener('click', watchHandler);
     });
 }
 
+// Отдельные обработчики для кнопок
+function favHandler(e) {
+    e.stopPropagation();
+    const movieId = parseInt(e.currentTarget.dataset.id);
+    toggleFavorite(movieId);
+    updateUI(); // Обновляем после изменения избранного
+}
+
+function watchHandler(e) {
+    e.stopPropagation();
+    const movieId = parseInt(e.currentTarget.dataset.id);
+    const movie = allSeries.find(m => m.id === movieId);
+    if (movie) openPlayer(movie);
+}
+
+// ==================== ПОЛУЧЕНИЕ ОТФИЛЬТРОВАННЫХ ФИЛЬМОВ ====================
 function getFilteredMovies() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-    const genre = document.getElementById('genreFilter').value;
+    const searchTerm = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
+    const genre = document.getElementById('genreFilter')?.value || 'all';
     const activeNav = document.querySelector('.nav-btn.active')?.dataset.nav || 'home';
     
     let filtered = [...allSeries];
@@ -96,10 +115,19 @@ function getFilteredMovies() {
     return filtered;
 }
 
+// ==================== ОБНОВЛЕНИЕ UI (С ЗАДЕРЖКОЙ ДЛЯ ПЛАВНОСТИ) ====================
 function updateUI() {
-    renderCards(getFilteredMovies());
+    // Убираем предыдущий таймер
+    if (renderTimeout) clearTimeout(renderTimeout);
+    
+    // Задержка 50 мс для устранения мигания
+    renderTimeout = setTimeout(() => {
+        const filtered = getFilteredMovies();
+        renderCards(filtered);
+    }, 50);
 }
 
+// ==================== ФИЛЬТРЫ И ПОИСК ====================
 function setupFiltersAndSearch() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
@@ -130,50 +158,24 @@ function setupFiltersAndSearch() {
     });
 }
 
-// ==================== ВИДЕОПЛЕЕР (VK VIDEO) ====================
+// ==================== ВИДЕОПЛЕЕР ====================
 function openPlayer(series) {
     const modal = document.getElementById('playerModal');
     const videoContainer = document.getElementById('videoContainer');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalDescription = document.getElementById('modalDescription');
-    const modalYearRating = document.getElementById('modalYearRating');
     
     if (!modal || !videoContainer) return;
     
-    // Устанавливаем заголовок и описание
-    if (modalTitle) modalTitle.textContent = series.title;
-    if (modalDescription) modalDescription.textContent = series.description;
-    if (modalYearRating) modalYearRating.textContent = `${series.year} | ${series.genre} | ⭐ ${series.rating}`;
+    document.getElementById('modalTitle').textContent = series.title;
+    document.getElementById('modalDescription').textContent = series.description;
+    document.getElementById('modalYearRating').textContent = `${series.year} | ${series.genre} | ⭐ ${series.rating}`;
     
-    // Вставляем видео (из VK)
     if (series.vkVideoCode) {
         videoContainer.innerHTML = series.vkVideoCode;
-    } 
-    // Если есть YouTube ссылка
-    else if (series.videoSrc) {
-        videoContainer.innerHTML = `
-            <iframe 
-                src="${series.videoSrc}" 
-                frameborder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowfullscreen
-                style="width:100%; height:400px; border-radius:12px;">
-            </iframe>
-        `;
-    } 
-    // Если есть YouTube ID
-    else if (series.trailerId) {
-        videoContainer.innerHTML = `
-            <iframe 
-                src="https://www.youtube.com/embed/${series.trailerId}?autoplay=1" 
-                frameborder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowfullscreen
-                style="width:100%; height:400px; border-radius:12px;">
-            </iframe>
-        `;
-    } 
-    else {
+    } else if (series.videoSrc) {
+        videoContainer.innerHTML = `<iframe src="${series.videoSrc}" frameborder="0" allow="autoplay; fullscreen" allowfullscreen style="width:100%; height:400px; border-radius:12px;"></iframe>`;
+    } else if (series.trailerId) {
+        videoContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${series.trailerId}?autoplay=1" frameborder="0" allow="autoplay; fullscreen" allowfullscreen style="width:100%; height:400px; border-radius:12px;"></iframe>`;
+    } else {
         videoContainer.innerHTML = '<p style="color:red; text-align:center; padding:50px;">❌ Видео недоступно</p>';
     }
     
@@ -202,43 +204,35 @@ function saveUsers(users) {
 
 function loadCurrentUser() {
     const saved = localStorage.getItem('currentUser');
-    if (saved) {
-        currentUser = JSON.parse(saved);
-    }
+    if (saved) currentUser = JSON.parse(saved);
 }
 
 function registerUser(username, email, password) {
     const users = getUsers();
-    
     if (users.find(u => u.email === email)) {
-        showToast('Пользователь с таким email уже существует', 'error');
+        showToast('Email уже существует', 'error');
         return false;
     }
-    
     if (users.find(u => u.username === username)) {
-        showToast('Пользователь с таким именем уже существует', 'error');
+        showToast('Имя пользователя уже существует', 'error');
         return false;
     }
     
     const newUser = {
         id: Date.now(),
-        username: username,
-        email: email,
-        password: password,
+        username, email, password,
         favorites: [],
         registeredAt: new Date().toISOString()
     };
-    
     users.push(newUser);
     saveUsers(users);
-    showToast('Регистрация успешна! Теперь войдите в аккаунт', 'success');
+    showToast('Регистрация успешна!', 'success');
     return true;
 }
 
 function loginUser(email, password) {
     const users = getUsers();
     const user = users.find(u => u.email === email && u.password === password);
-    
     if (user) {
         currentUser = { ...user };
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -248,7 +242,6 @@ function loginUser(email, password) {
         showToast(`Добро пожаловать, ${user.username}!`, 'success');
         return true;
     }
-    
     showToast('Неверный email или пароль', 'error');
     return false;
 }
@@ -264,7 +257,7 @@ function logoutUser() {
 
 function toggleFavorite(movieId) {
     if (!currentUser) {
-        showToast('Войдите в аккаунт, чтобы добавлять в избранное', 'warning');
+        showToast('Войдите в аккаунт', 'warning');
         openLoginModal();
         return;
     }
@@ -297,57 +290,30 @@ function updateUserPanel() {
     if (!panel) return;
     
     if (currentUser) {
-        panel.innerHTML = `
-            <div class="user-info">
-                <span class="user-name">👤 ${escapeHtml(currentUser.username)}</span>
-                <button class="profile-btn" id="profileBtn">Профиль</button>
-            </div>
-        `;
-        const profileBtn = document.getElementById('profileBtn');
-        if (profileBtn) profileBtn.addEventListener('click', openProfileModal);
+        panel.innerHTML = `<div class="user-info"><span class="user-name">👤 ${escapeHtml(currentUser.username)}</span><button class="profile-btn" id="profileBtn">Профиль</button></div>`;
+        document.getElementById('profileBtn')?.addEventListener('click', openProfileModal);
     } else {
-        panel.innerHTML = `
-            <button class="auth-btn" id="showLoginBtn">Вход</button>
-            <button class="auth-btn" id="showRegisterBtn">Регистрация</button>
-        `;
-        const loginBtn = document.getElementById('showLoginBtn');
-        const registerBtn = document.getElementById('showRegisterBtn');
-        if (loginBtn) loginBtn.addEventListener('click', openLoginModal);
-        if (registerBtn) registerBtn.addEventListener('click', openRegisterModal);
+        panel.innerHTML = `<button class="auth-btn" id="showLoginBtn">Вход</button><button class="auth-btn" id="showRegisterBtn">Регистрация</button>`;
+        document.getElementById('showLoginBtn')?.addEventListener('click', openLoginModal);
+        document.getElementById('showRegisterBtn')?.addEventListener('click', openRegisterModal);
     }
 }
 
-function openLoginModal() {
-    const modal = document.getElementById('loginModal');
-    if (modal) modal.style.display = 'flex';
-}
-
-function openRegisterModal() {
-    const modal = document.getElementById('registerModal');
-    if (modal) modal.style.display = 'flex';
-}
+function openLoginModal() { document.getElementById('loginModal').style.display = 'flex'; }
+function openRegisterModal() { document.getElementById('registerModal').style.display = 'flex'; }
 
 function openProfileModal() {
     if (currentUser) {
-        const usernameSpan = document.getElementById('profileUsername');
-        const emailSpan = document.getElementById('profileEmail');
-        const dateSpan = document.getElementById('profileDate');
-        const favoritesSpan = document.getElementById('profileFavoritesCount');
-        
-        if (usernameSpan) usernameSpan.textContent = currentUser.username;
-        if (emailSpan) emailSpan.textContent = currentUser.email;
-        if (dateSpan) dateSpan.textContent = new Date(currentUser.registeredAt).toLocaleDateString();
-        if (favoritesSpan) favoritesSpan.textContent = (currentUser.favorites || []).length;
-        
-        const modal = document.getElementById('profileModal');
-        if (modal) modal.style.display = 'flex';
+        document.getElementById('profileUsername').textContent = currentUser.username;
+        document.getElementById('profileEmail').textContent = currentUser.email;
+        document.getElementById('profileDate').textContent = new Date(currentUser.registeredAt).toLocaleDateString();
+        document.getElementById('profileFavoritesCount').textContent = (currentUser.favorites || []).length;
+        document.getElementById('profileModal').style.display = 'flex';
     }
 }
 
 function closeAllModals() {
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.style.display = 'none';
-    });
+    document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
     const videoContainer = document.getElementById('videoContainer');
     if (videoContainer) videoContainer.innerHTML = '';
     document.body.style.overflow = 'auto';
@@ -357,105 +323,44 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#333'};
-        color: white;
-        padding: 12px 24px;
-        border-radius: 50px;
-        z-index: 1100;
-        animation: slideIn 0.3s ease;
-        font-size: 14px;
-    `;
+    toast.style.cssText = `position:fixed; bottom:30px; right:30px; background:${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#333'}; color:white; padding:12px 24px; border-radius:50px; z-index:1100; animation:slideIn 0.3s ease;`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
 }
 
 function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
+    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
 }
 
-// ==================== ОБРАБОТЧИКИ СОБЫТИЙ ====================
-document.querySelectorAll('.modal-close').forEach(btn => {
-    btn.addEventListener('click', closeAllModals);
+// ==================== ОБРАБОТЧИКИ ====================
+document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', closeAllModals));
+window.onclick = (e) => { if (e.target.classList.contains('modal')) closeAllModals(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllModals(); });
+
+document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    loginUser(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
 });
 
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        closeAllModals();
-    }
-};
-
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeAllModals();
-    }
+document.getElementById('registerForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value;
+    const email = document.getElementById('regEmail').value;
+    const password = document.getElementById('regPassword').value;
+    if (registerUser(username, email, password)) { closeAllModals(); openLoginModal(); }
 });
 
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        loginUser(email, password);
-    });
-}
+document.getElementById('switchToRegister')?.addEventListener('click', (e) => { e.preventDefault(); closeAllModals(); openRegisterModal(); });
+document.getElementById('switchToLogin')?.addEventListener('click', (e) => { e.preventDefault(); closeAllModals(); openLoginModal(); });
+document.getElementById('logoutBtn')?.addEventListener('click', logoutUser);
 
-const registerForm = document.getElementById('registerForm');
-if (registerForm) {
-    registerForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('regUsername').value;
-        const email = document.getElementById('regEmail').value;
-        const password = document.getElementById('regPassword').value;
-        if (registerUser(username, email, password)) {
-            closeAllModals();
-            openLoginModal();
-        }
-    });
-}
-
-const switchToRegister = document.getElementById('switchToRegister');
-if (switchToRegister) {
-    switchToRegister.addEventListener('click', (e) => {
-        e.preventDefault();
-        closeAllModals();
-        openRegisterModal();
-    });
-}
-
-const switchToLogin = document.getElementById('switchToLogin');
-if (switchToLogin) {
-    switchToLogin.addEventListener('click', (e) => {
-        e.preventDefault();
-        closeAllModals();
-        openLoginModal();
-    });
-}
-
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', logoutUser);
-}
-
-const heroTrailerBtn = document.getElementById('heroTrailerBtn');
-if (heroTrailerBtn) {
-    heroTrailerBtn.addEventListener('click', () => {
-        const duneMovie = allSeries.find(m => m.title.includes('Дюна'));
-        if (duneMovie) openPlayer(duneMovie);
-    });
-}
+document.getElementById('heroTrailerBtn')?.addEventListener('click', () => {
+    const duneMovie = allSeries.find(m => m.title.includes('Дюна'));
+    if (duneMovie) openPlayer(duneMovie);
+});
 
 // ==================== ЗАПУСК ====================
-window.addEventListener('load', () => {
+window.addEventListener('DOMContentLoaded', () => {
     loadData();
 });
