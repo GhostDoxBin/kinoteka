@@ -1,7 +1,7 @@
 // ==================== ДАННЫЕ ====================
 let allSeries = [];
 let currentUser = null;
-let currentFilteredIds = []; // Храним ID отфильтрованных фильмов
+let debounceTimer = null;
 
 // ==================== ЗАГРУЗКА ДАННЫХ ====================
 async function loadData() {
@@ -11,7 +11,7 @@ async function loadData() {
         allSeries = await response.json();
         loadCurrentUser();
         updateUserPanel();
-        createInitialCards(); // Создаём карточки один раз
+        createInitialCards();
         setupFiltersAndSearch();
         console.log("✅ Загружено", allSeries.length, "карточек");
     } catch (error) {
@@ -51,7 +51,6 @@ function createInitialCards() {
             </div>
         `;
         
-        // Сохраняем ссылку на карточку для быстрого доступа
         series.cardElement = card;
         
         card.querySelector('.fav-btn').addEventListener('click', (e) => {
@@ -67,15 +66,16 @@ function createInitialCards() {
         container.appendChild(card);
     });
     
-    // Обновляем видимость карточек
     updateCardsVisibility();
 }
 
-// ==================== ОБНОВЛЕНИЕ ВИДИМОСТИ КАРТОЧЕК (БЕЗ ПЕРЕСОЗДАНИЯ) ====================
+// ==================== ОБНОВЛЕНИЕ ВИДИМОСТИ КАРТОЧЕК (С ЗАДЕРЖКОЙ) ====================
 function updateCardsVisibility() {
     const searchTerm = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
     const genre = document.getElementById('genreFilter')?.value || 'all';
     const activeNav = document.querySelector('.nav-btn.active')?.dataset.nav || 'home';
+    
+    const favorites = currentUser ? (currentUser.favorites || []) : [];
     
     let visibleCount = 0;
     
@@ -97,8 +97,7 @@ function updateCardsVisibility() {
         
         // Навигация
         if (visible) {
-            if (activeNav === 'favorites' && currentUser) {
-                const favorites = currentUser.favorites || [];
+            if (activeNav === 'favorites') {
                 if (!favorites.includes(series.id)) visible = false;
             } else if (activeNav === 'series') {
                 if (!series.genre.toLowerCase().includes('сериал')) visible = false;
@@ -107,12 +106,19 @@ function updateCardsVisibility() {
             }
         }
         
-        // Показываем или скрываем карточку
+        // Плавное скрытие/показ
         if (visible) {
-            card.style.display = '';
+            if (card.style.display === 'none') {
+                card.style.display = '';
+                card.style.opacity = '0';
+                setTimeout(() => { if (card) card.style.opacity = '1'; }, 10);
+            }
             visibleCount++;
         } else {
-            card.style.display = 'none';
+            if (card.style.display !== 'none') {
+                card.style.opacity = '0';
+                setTimeout(() => { if (card) card.style.display = 'none'; }, 150);
+            }
         }
     });
     
@@ -124,13 +130,11 @@ function updateCardsVisibility() {
         favorites: 'Избранное'
     };
     const sectionTitle = document.getElementById('sectionTitle');
-    if (sectionTitle) {
-        sectionTitle.textContent = titles[activeNav] || 'Сейчас в прокате';
-    }
+    if (sectionTitle) sectionTitle.textContent = titles[activeNav] || 'Сейчас в прокате';
     
-    // Показываем сообщение, если ничего не найдено
+    // Сообщение "ничего не найдено"
     const container = document.getElementById('moviesGrid');
-    const noResultsMsg = container.querySelector('.no-results-message');
+    let noResultsMsg = container.querySelector('.no-results-message');
     if (visibleCount === 0) {
         if (!noResultsMsg) {
             const msg = document.createElement('div');
@@ -143,30 +147,19 @@ function updateCardsVisibility() {
     }
 }
 
-// ==================== ОБНОВЛЕНИЕ ИКОНОК ИЗБРАННОГО ====================
-function updateFavoriteIcons() {
-    const favorites = currentUser ? (currentUser.favorites || []) : [];
-    
-    allSeries.forEach(series => {
-        const card = series.cardElement;
-        if (card) {
-            const favBtn = card.querySelector('.fav-btn');
-            const isFavorite = favorites.includes(series.id);
-            favBtn.textContent = isFavorite ? '❤️' : '♡';
-            if (isFavorite) {
-                favBtn.classList.add('active');
-            } else {
-                favBtn.classList.remove('active');
-            }
-        }
-    });
+// ==================== ОБНОВЛЕНИЕ С ЗАДЕРЖКОЙ (DEBOUNCE) ====================
+function debouncedUpdate() {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        updateCardsVisibility();
+    }, 200); // Задержка 200 мс — не мигает, но быстро реагирует
 }
 
 // ==================== ФИЛЬТРЫ И ПОИСК ====================
 function setupFiltersAndSearch() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
-        searchInput.addEventListener('input', () => updateCardsVisibility());
+        searchInput.addEventListener('input', () => debouncedUpdate());
     }
     
     const genreFilter = document.getElementById('genreFilter');
@@ -180,6 +173,21 @@ function setupFiltersAndSearch() {
             btn.classList.add('active');
             updateCardsVisibility();
         });
+    });
+}
+
+// ==================== ОБНОВЛЕНИЕ ИКОНОК ИЗБРАННОГО ====================
+function updateFavoriteIcons() {
+    const favorites = currentUser ? (currentUser.favorites || []) : [];
+    
+    allSeries.forEach(series => {
+        const card = series.cardElement;
+        if (card) {
+            const favBtn = card.querySelector('.fav-btn');
+            const isFavorite = favorites.includes(series.id);
+            favBtn.textContent = isFavorite ? '❤️' : '♡';
+            favBtn.classList.toggle('active', isFavorite);
+        }
     });
 }
 
@@ -310,7 +318,6 @@ function toggleFavorite(movieId) {
     }
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     
-    // Обновляем только иконки, не пересоздавая карточки
     updateFavoriteIcons();
     updateCardsVisibility();
 }
@@ -363,6 +370,22 @@ function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
 }
+
+// Добавляем CSS для плавных переходов
+const style = document.createElement('style');
+style.textContent = `
+    .movie-card {
+        transition: opacity 0.15s ease, transform 0.2s ease;
+        opacity: 1;
+    }
+    .no-results-message {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 50px;
+        color: #888;
+    }
+`;
+document.head.appendChild(style);
 
 // ==================== ОБРАБОТЧИКИ ====================
 document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', closeAllModals));
