@@ -5,7 +5,7 @@
         "genre": "сериал, драма, криминал",
         "year": 2008,
         "rating": 9.5,
-        "poster": "https://avatars.mds.yandex.net/get-mpic/1866085/img_id1120920370900971412.jpeg/orig",
+        "poster": "posters/test.jpg",
         "description": "Школьный учитель химии узнаёт, что болен раком лёгких. Чтобы обеспечить будущее своей семьи, он начинает варить и продавать метамфетамин. Вскоре к нему присоединяется его бывший ученик. Вместе они создают одну из самых крупных наркоимперий.",
         "vkVideoCode": "<iframe src=\"https://vkvideo.ru/video_ext.php?oid=-237581709&id=456239135&hash=a11afbc6d7cec5bd&hd=4\" width=\"100%\" height=\"400\" allow=\"autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock;\" frameborder=\"0\" allowfullscreen style=\"border-radius:12px;\"></iframe>"
     },
@@ -15,7 +15,7 @@
         "genre": "мультфильм, комедия, приключения",
         "year": 2001,
         "rating": 8.9,
-        "poster": "test.jpg",
+        "poster": "posters/test.jpg",
         "description": "Зелёный огр Шрек живёт один в своём болоте. Но однажды сюда вторгаются сказочные персонажи, которых изгнал злой лорд Фаркуад. Чтобы вернуть покой, Шрек отправляется спасать принцессу Фиону.",
         "vkVideoCode": "<iframe src=\"https://vkvideo.ru/video_ext.php?oid=-237581709&id=456239135&hash=a11afbc6d7cec5bd&hd=4\" width=\"100%\" height=\"400\" allow=\"autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock;\" frameborder=\"0\" allowfullscreen style=\"border-radius:12px;\"></iframe>"
     },
