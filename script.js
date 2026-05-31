@@ -1,7 +1,7 @@
 // ==================== ДАННЫЕ ====================
 let allSeries = [];
 let currentUser = null;
-let renderTimeout = null;
+let currentFilteredIds = []; // Храним ID отфильтрованных фильмов
 
 // ==================== ЗАГРУЗКА ДАННЫХ ====================
 async function loadData() {
@@ -11,7 +11,7 @@ async function loadData() {
         allSeries = await response.json();
         loadCurrentUser();
         updateUserPanel();
-        renderCards(allSeries);
+        createInitialCards(); // Создаём карточки один раз
         setupFiltersAndSearch();
         console.log("✅ Загружено", allSeries.length, "карточек");
     } catch (error) {
@@ -21,139 +21,164 @@ async function loadData() {
     }
 }
 
-// ==================== РЕНДЕРИНГ КАРТОЧЕК (ОПТИМИЗИРОВАННЫЙ) ====================
-function renderCards(seriesArray) {
+// ==================== СОЗДАНИЕ КАРТОЧЕК (ОДИН РАЗ) ====================
+function createInitialCards() {
     const container = document.getElementById('moviesGrid');
     if (!container) return;
     
-    if (!seriesArray.length) {
-        container.innerHTML = '<div class="no-results">😕 Ничего не найдено</div>';
-        return;
-    }
+    container.innerHTML = '';
     
-    const favorites = currentUser ? (currentUser.favorites || []) : [];
-    
-    // Собираем HTML строкой (быстрее, чем создавать элементы по одному)
-    let html = '';
-    for (const series of seriesArray) {
-        const isFavorite = favorites.includes(series.id);
-        html += `
-            <div class="movie-card" data-id="${series.id}">
-                <img src="${series.poster}" alt="${series.title}" class="movie-poster" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
-                <div class="movie-info">
-                    <h3 class="movie-title">${escapeHtml(series.title)}</h3>
-                    <div class="movie-meta">
-                        <span>${series.year}</span>
-                        <span>${series.genre}</span>
-                    </div>
-                    <div class="movie-rating">⭐ ${series.rating}</div>
-                    <div class="movie-actions">
-                        <button class="fav-btn ${isFavorite ? 'active' : ''}" data-id="${series.id}">
-                            ${isFavorite ? '❤️' : '♡'}
-                        </button>
-                        <button class="watch-btn" data-id="${series.id}">Смотреть</button>
-                    </div>
+    allSeries.forEach(series => {
+        const card = document.createElement('div');
+        card.className = 'movie-card';
+        card.dataset.id = series.id;
+        card.dataset.title = series.title.toLowerCase();
+        card.dataset.genre = series.genre.toLowerCase();
+        card.dataset.year = series.year;
+        card.innerHTML = `
+            <img src="${series.poster}" alt="${series.title}" class="movie-poster" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450?text=No+Image'">
+            <div class="movie-info">
+                <h3 class="movie-title">${escapeHtml(series.title)}</h3>
+                <div class="movie-meta">
+                    <span>${series.year}</span>
+                    <span>${series.genre}</span>
+                </div>
+                <div class="movie-rating">⭐ ${series.rating}</div>
+                <div class="movie-actions">
+                    <button class="fav-btn" data-id="${series.id}">♡</button>
+                    <button class="watch-btn" data-id="${series.id}">Смотреть</button>
                 </div>
             </div>
         `;
-    }
-    
-    // Один раз меняем DOM
-    container.innerHTML = html;
-    
-    // Добавляем обработчики событий (один раз после вставки)
-    document.querySelectorAll('.fav-btn').forEach(btn => {
-        btn.removeEventListener('click', favHandler);
-        btn.addEventListener('click', favHandler);
+        
+        // Сохраняем ссылку на карточку для быстрого доступа
+        series.cardElement = card;
+        
+        card.querySelector('.fav-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleFavorite(series.id);
+        });
+        
+        card.querySelector('.watch-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            openPlayer(series);
+        });
+        
+        container.appendChild(card);
     });
     
-    document.querySelectorAll('.watch-btn').forEach(btn => {
-        btn.removeEventListener('click', watchHandler);
-        btn.addEventListener('click', watchHandler);
-    });
+    // Обновляем видимость карточек
+    updateCardsVisibility();
 }
 
-// Отдельные обработчики для кнопок
-function favHandler(e) {
-    e.stopPropagation();
-    const movieId = parseInt(e.currentTarget.dataset.id);
-    toggleFavorite(movieId);
-    updateUI(); // Обновляем после изменения избранного
-}
-
-function watchHandler(e) {
-    e.stopPropagation();
-    const movieId = parseInt(e.currentTarget.dataset.id);
-    const movie = allSeries.find(m => m.id === movieId);
-    if (movie) openPlayer(movie);
-}
-
-// ==================== ПОЛУЧЕНИЕ ОТФИЛЬТРОВАННЫХ ФИЛЬМОВ ====================
-function getFilteredMovies() {
+// ==================== ОБНОВЛЕНИЕ ВИДИМОСТИ КАРТОЧЕК (БЕЗ ПЕРЕСОЗДАНИЯ) ====================
+function updateCardsVisibility() {
     const searchTerm = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
     const genre = document.getElementById('genreFilter')?.value || 'all';
     const activeNav = document.querySelector('.nav-btn.active')?.dataset.nav || 'home';
     
-    let filtered = [...allSeries];
+    let visibleCount = 0;
     
-    if (searchTerm) {
-        filtered = filtered.filter(m => m.title.toLowerCase().includes(searchTerm));
-    }
-    if (genre !== 'all') {
-        filtered = filtered.filter(m => m.genre.toLowerCase().includes(genre.toLowerCase()));
-    }
-    if (activeNav === 'favorites' && currentUser) {
-        filtered = filtered.filter(m => currentUser.favorites?.includes(m.id));
-    }
-    if (activeNav === 'series') {
-        filtered = filtered.filter(m => m.genre.toLowerCase().includes('сериал'));
-    }
-    if (activeNav === 'movies') {
-        filtered = filtered.filter(m => !m.genre.toLowerCase().includes('сериал') && !m.genre.toLowerCase().includes('мультфильм'));
+    allSeries.forEach(series => {
+        const card = series.cardElement;
+        if (!card) return;
+        
+        let visible = true;
+        
+        // Поиск
+        if (searchTerm && !series.title.toLowerCase().includes(searchTerm)) {
+            visible = false;
+        }
+        
+        // Жанр
+        if (visible && genre !== 'all' && !series.genre.toLowerCase().includes(genre.toLowerCase())) {
+            visible = false;
+        }
+        
+        // Навигация
+        if (visible) {
+            if (activeNav === 'favorites' && currentUser) {
+                const favorites = currentUser.favorites || [];
+                if (!favorites.includes(series.id)) visible = false;
+            } else if (activeNav === 'series') {
+                if (!series.genre.toLowerCase().includes('сериал')) visible = false;
+            } else if (activeNav === 'movies') {
+                if (series.genre.toLowerCase().includes('сериал') || series.genre.toLowerCase().includes('мультфильм')) visible = false;
+            }
+        }
+        
+        // Показываем или скрываем карточку
+        if (visible) {
+            card.style.display = '';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Обновляем заголовок
+    const titles = {
+        home: 'Сейчас в прокате',
+        movies: 'Фильмы',
+        series: 'Сериалы',
+        favorites: 'Избранное'
+    };
+    const sectionTitle = document.getElementById('sectionTitle');
+    if (sectionTitle) {
+        sectionTitle.textContent = titles[activeNav] || 'Сейчас в прокате';
     }
     
-    return filtered;
+    // Показываем сообщение, если ничего не найдено
+    const container = document.getElementById('moviesGrid');
+    const noResultsMsg = container.querySelector('.no-results-message');
+    if (visibleCount === 0) {
+        if (!noResultsMsg) {
+            const msg = document.createElement('div');
+            msg.className = 'no-results no-results-message';
+            msg.textContent = '😕 Ничего не найдено';
+            container.appendChild(msg);
+        }
+    } else {
+        if (noResultsMsg) noResultsMsg.remove();
+    }
 }
 
-// ==================== ОБНОВЛЕНИЕ UI (С ЗАДЕРЖКОЙ ДЛЯ ПЛАВНОСТИ) ====================
-function updateUI() {
-    // Убираем предыдущий таймер
-    if (renderTimeout) clearTimeout(renderTimeout);
+// ==================== ОБНОВЛЕНИЕ ИКОНОК ИЗБРАННОГО ====================
+function updateFavoriteIcons() {
+    const favorites = currentUser ? (currentUser.favorites || []) : [];
     
-    // Задержка 50 мс для устранения мигания
-    renderTimeout = setTimeout(() => {
-        const filtered = getFilteredMovies();
-        renderCards(filtered);
-    }, 50);
+    allSeries.forEach(series => {
+        const card = series.cardElement;
+        if (card) {
+            const favBtn = card.querySelector('.fav-btn');
+            const isFavorite = favorites.includes(series.id);
+            favBtn.textContent = isFavorite ? '❤️' : '♡';
+            if (isFavorite) {
+                favBtn.classList.add('active');
+            } else {
+                favBtn.classList.remove('active');
+            }
+        }
+    });
 }
 
 // ==================== ФИЛЬТРЫ И ПОИСК ====================
 function setupFiltersAndSearch() {
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
-        searchInput.addEventListener('input', () => updateUI());
+        searchInput.addEventListener('input', () => updateCardsVisibility());
     }
     
     const genreFilter = document.getElementById('genreFilter');
     if (genreFilter) {
-        genreFilter.addEventListener('change', () => updateUI());
+        genreFilter.addEventListener('change', () => updateCardsVisibility());
     }
     
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const titles = {
-                home: 'Сейчас в прокате',
-                movies: 'Фильмы',
-                series: 'Сериалы',
-                favorites: 'Избранное'
-            };
-            const sectionTitle = document.getElementById('sectionTitle');
-            if (sectionTitle) {
-                sectionTitle.textContent = titles[btn.dataset.nav] || 'Сейчас в прокате';
-            }
-            updateUI();
+            updateCardsVisibility();
         });
     });
 }
@@ -237,7 +262,8 @@ function loginUser(email, password) {
         currentUser = { ...user };
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         updateUserPanel();
-        updateUI();
+        updateFavoriteIcons();
+        updateCardsVisibility();
         closeAllModals();
         showToast(`Добро пожаловать, ${user.username}!`, 'success');
         return true;
@@ -250,7 +276,8 @@ function logoutUser() {
     currentUser = null;
     localStorage.removeItem('currentUser');
     updateUserPanel();
-    updateUI();
+    updateFavoriteIcons();
+    updateCardsVisibility();
     closeAllModals();
     showToast('Вы вышли из аккаунта', 'info');
 }
@@ -282,6 +309,10 @@ function toggleFavorite(movieId) {
         saveUsers(users);
     }
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    
+    // Обновляем только иконки, не пересоздавая карточки
+    updateFavoriteIcons();
+    updateCardsVisibility();
 }
 
 // ==================== UI ФУНКЦИИ ====================
@@ -323,7 +354,7 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
-    toast.style.cssText = `position:fixed; bottom:30px; right:30px; background:${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#333'}; color:white; padding:12px 24px; border-radius:50px; z-index:1100; animation:slideIn 0.3s ease;`;
+    toast.style.cssText = `position:fixed; bottom:30px; right:30px; background:${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#333'}; color:white; padding:12px 24px; border-radius:50px; z-index:1100; animation:slideIn 0.3s ease; font-size:14px;`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
 }
